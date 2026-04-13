@@ -1,8 +1,9 @@
 import { useState } from "react";
 import * as XLSX from "xlsx";
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 
-/* ================= MAIN APP ================= */
+/* ================= APP ================= */
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -14,29 +15,24 @@ export default function App() {
 
 function Auth({ onLogin }) {
   const [isSignup, setIsSignup] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    hospital: "",
-    role: "Doctor"
-  });
+  const [form, setForm] = useState({ name: "", hospital: "", role: "Doctor" });
 
   return (
-    <div style={styles.authContainer}>
-      <div style={styles.card}>
+    <div style={styles.authWrap}>
+      <div style={styles.authCard}>
         <h1>VitalLoop</h1>
         <h3>{isSignup ? "Create Account" : "Login"}</h3>
 
         <input placeholder="Name" style={styles.input}
           onChange={e => setForm({...form, name: e.target.value})} />
 
-        <input placeholder="Email" style={styles.input} />
-        <input type="password" placeholder="Password" style={styles.input} />
+        <input placeholder="Email" style={styles.input}/>
+        <input type="password" placeholder="Password" style={styles.input}/>
 
         {isSignup && (
           <>
             <input placeholder="Hospital" style={styles.input}
               onChange={e => setForm({...form, hospital: e.target.value})} />
-
             <select style={styles.input}
               onChange={e => setForm({...form, role: e.target.value})}>
               <option>Doctor</option>
@@ -50,11 +46,8 @@ function Auth({ onLogin }) {
           {isSignup ? "Create Account" : "Login"}
         </button>
 
-        <p>
-          {isSignup ? "Already have an account?" : "New user?"}
-          <span style={styles.link} onClick={() => setIsSignup(!isSignup)}>
-            {isSignup ? " Login" : " Create Account"}
-          </span>
+        <p onClick={() => setIsSignup(!isSignup)} style={styles.link}>
+          {isSignup ? "Login" : "Create Account"}
         </p>
       </div>
     </div>
@@ -87,16 +80,13 @@ function Dashboard({ user }) {
   /* ===== Excel ===== */
 
   const handleImport = (e) => {
-    const file = e.target.files[0];
     const reader = new FileReader();
-
     reader.onload = (evt) => {
       const wb = XLSX.read(evt.target.result, { type: "binary" });
       const ws = wb.Sheets[wb.SheetNames[0]];
       setInventory(XLSX.utils.sheet_to_json(ws));
     };
-
-    reader.readAsBinaryString(file);
+    reader.readAsBinaryString(e.target.files[0]);
   };
 
   const handleExport = () => {
@@ -113,69 +103,74 @@ function Dashboard({ user }) {
       <div style={styles.sidebar}>
         <h2>VitalLoop</h2>
 
-        <div style={{ marginTop: "auto" }}>
-          <div style={styles.userCard}>
-            <div>{user?.name}</div>
-            <div style={{ fontSize: 12 }}>
-              {user?.role} · {user?.hospital}
-            </div>
-          </div>
+        <div style={styles.user}>
+          <b>{user?.name}</b>
+          <div>{user?.role} · {user?.hospital}</div>
         </div>
       </div>
 
       {/* MAIN */}
       <div style={styles.main}>
 
-        <h1>Dashboard</h1>
-
-        {/* KPI */}
-        <div style={styles.kpiRow}>
-          <KPI title="Total Units" value={totalUnits}/>
-          <KPI title="Blood Saved" value="1240"/>
-          <KPI title="Time Saved" value="3.2 hrs"/>
-          <KPI title="Shortages" value="3"/>
+        {/* KPIs */}
+        <div style={styles.kpis}>
+          <Card title="Total Units" value={totalUnits}/>
+          <Card title="Blood Saved" value="1240"/>
+          <Card title="Time Saved" value="3.2 hrs"/>
+          <Card title="Shortages" value="3"/>
         </div>
 
-        {/* MAP */}
-        <h2>Network Overview (Delhi)</h2>
+        {/* GRID */}
+        <div style={styles.grid}>
 
-        <MapContainer center={[28.6139,77.2090]} zoom={11} style={{height:300}}>
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"/>
-          {hospitals.map((h,i)=>(
-            <Marker key={i} position={h.position}>
-              <Popup>{h.name} - {h.status}</Popup>
-            </Marker>
-          ))}
-          {routes.map((r,i)=>(
-            <Polyline key={i} positions={r} color="blue"/>
-          ))}
-        </MapContainer>
+          {/* MAP */}
+          <div style={styles.card}>
+            <h3>Network Overview</h3>
+            <MapContainer center={[28.6139,77.2090]} zoom={11} style={{height:250}}>
+              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"/>
+              {hospitals.map((h,i)=>(
+                <Marker key={i} position={h.position}>
+                  <Popup>{h.name} - {h.status}</Popup>
+                </Marker>
+              ))}
+              {routes.map((r,i)=>(
+                <Polyline key={i} positions={r} color="blue"/>
+              ))}
+            </MapContainer>
+          </div>
 
-        {/* INVENTORY */}
-        <h2>Inventory</h2>
+          {/* ALERTS */}
+          <div style={styles.card}>
+            <h3>Critical Alerts</h3>
+            <p>O- shortage at AIIMS</p>
+            <p>A+ shortage at GTB</p>
+          </div>
 
-        <input type="file" onChange={handleImport}/>
-        <button onClick={handleExport}>Export</button>
+          {/* INVENTORY */}
+          <div style={styles.card}>
+            <h3>Inventory</h3>
+            <input type="file" onChange={handleImport}/>
+            <button onClick={handleExport}>Export</button>
 
-        <table border="1">
-          <thead>
-            <tr>
-              <th>Resource</th>
-              <th>Type</th>
-              <th>Units</th>
-            </tr>
-          </thead>
-          <tbody>
-            {inventory.map((i, idx) => (
-              <tr key={idx}>
-                <td>{i.resource}</td>
-                <td>{i.type}</td>
-                <td>{i.units}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            <table>
+              <tbody>
+                {inventory.map((i,idx)=>(
+                  <tr key={idx}>
+                    <td>{i.type}</td>
+                    <td>{i.units}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
+          {/* TRANSFERS */}
+          <div style={styles.card}>
+            <h3>Active Transfers</h3>
+            <p>AIIMS → Safdarjung (O-)</p>
+          </div>
+
+        </div>
       </div>
     </div>
   );
@@ -183,9 +178,9 @@ function Dashboard({ user }) {
 
 /* ================= COMPONENT ================= */
 
-function KPI({ title, value }) {
+function Card({ title, value }) {
   return (
-    <div style={styles.kpiCard}>
+    <div style={styles.kpi}>
       <h4>{title}</h4>
       <h2>{value}</h2>
     </div>
@@ -195,15 +190,17 @@ function KPI({ title, value }) {
 /* ================= STYLES ================= */
 
 const styles = {
-  app: { display: "flex", height: "100vh" },
-  authContainer: { height: "100vh", display: "flex", justifyContent: "center", alignItems: "center", background: "#f4f6f9" },
-  card: { padding: 30, background: "white", borderRadius: 10, width: 300, textAlign: "center" },
-  input: { width: "100%", padding: 10, margin: "8px 0" },
-  button: { width: "100%", padding: 10, background: "#2563eb", color: "white", border: "none" },
-  link: { color: "#2563eb", cursor: "pointer" },
-  sidebar: { width: 220, background: "#1e293b", color: "white", padding: 20, display: "flex", flexDirection: "column" },
-  userCard: { background: "#334155", padding: 10, borderRadius: 8 },
-  main: { flex: 1, padding: 20 },
-  kpiRow: { display: "flex", gap: 10 },
-  kpiCard: { border: "1px solid #ccc", padding: 10, borderRadius: 8 }
+  app: { display: "flex", height: "100vh", fontFamily: "Arial" },
+  sidebar: { width: 220, background: "#1e293b", color: "white", padding: 20, display:"flex", flexDirection:"column", justifyContent:"space-between"},
+  user: { background:"#334155", padding:10, borderRadius:8 },
+  main: { flex:1, padding:20, background:"#f4f6f9" },
+  kpis: { display:"flex", gap:10, marginBottom:20 },
+  kpi: { background:"white", padding:15, borderRadius:10, flex:1 },
+  grid: { display:"grid", gridTemplateColumns:"2fr 1fr", gap:15 },
+  card: { background:"white", padding:15, borderRadius:10 },
+  authWrap: { display:"flex", justifyContent:"center", alignItems:"center", height:"100vh" },
+  authCard: { background:"white", padding:30, borderRadius:10, width:300 },
+  input: { width:"100%", margin:5, padding:10 },
+  button: { width:"100%", padding:10, background:"#2563eb", color:"white", border:"none" },
+  link: { color:"#2563eb", cursor:"pointer", marginTop:10 }
 };
